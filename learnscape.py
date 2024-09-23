@@ -24,9 +24,10 @@ import time
 import logging
 
 # Configure logging
-logging.basicConfig(filename='debug.log', level=logging.DEBUG, filemode='w',
+logging.basicConfig(filename= __file__, level=logging.DEBUG, filemode='w',
                     format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
+log.debug("what the hell")
 
 stdscr = curses.initscr()
 
@@ -44,6 +45,7 @@ def hex_to_rgb(hexstring):
 green = hex_to_rgb("29ad2b")
 brown = hex_to_rgb("896018")
 white = hex_to_rgb("ffffff")
+black = hex_to_rgb("000000")
 
 tn_bg = hex_to_rgb("24283b")
 tn_bg_dark = hex_to_rgb("1f2335")
@@ -99,7 +101,7 @@ COLOR_DIM_WHITE = 15
 
 # RGB values (0-1000 scale)
 color_definitions = {
-    COLOR_BLACK: tn_terminal_black,
+    COLOR_BLACK: black,
     COLOR_RED: tn_red1,
     COLOR_GREEN: green,
     COLOR_ORANGE: tn_orange,
@@ -128,22 +130,22 @@ def init_16_colors():
             curses.init_color(color, *rgb)
     
     # Define color pairs using custom color numbers
-    curses.init_pair(1, COLOR_BLACK, -1)
-    curses.init_pair(2, COLOR_RED, -1)
-    curses.init_pair(3, COLOR_GREEN, -1)
-    curses.init_pair(4, COLOR_ORANGE, -1)
-    curses.init_pair(5, COLOR_BLUE, -1)
-    curses.init_pair(6, COLOR_MAGENTA, -1)
-    curses.init_pair(7, COLOR_CYAN, -1)
-    curses.init_pair(8, COLOR_WHITE, -1)
-    curses.init_pair(9, COLOR_DARK_GREY, -1)
-    curses.init_pair(10, COLOR_LIGHT_RED, -1)
-    curses.init_pair(11, COLOR_LIGHT_GREEN, -1)
-    curses.init_pair(12, COLOR_YELLOW, -1)
-    curses.init_pair(13, COLOR_LIGHT_BLUE, -1)
-    curses.init_pair(14, COLOR_PURPLE, -1)
-    curses.init_pair(15, COLOR_BROWN, -1)
-    curses.init_pair(16, COLOR_DIM_WHITE, -1)
+    curses.init_pair(1, COLOR_BLACK, COLOR_BLACK)
+    curses.init_pair(2, COLOR_RED, COLOR_BLACK)
+    curses.init_pair(3, COLOR_GREEN, COLOR_BLACK)
+    curses.init_pair(4, COLOR_ORANGE, COLOR_BLACK)
+    curses.init_pair(5, COLOR_BLUE, COLOR_BLACK)
+    curses.init_pair(6, COLOR_MAGENTA, COLOR_BLACK)
+    curses.init_pair(7, COLOR_CYAN, COLOR_BLACK)
+    curses.init_pair(8, COLOR_WHITE, COLOR_BLACK)
+    curses.init_pair(9, COLOR_DARK_GREY, COLOR_BLACK)
+    curses.init_pair(10, COLOR_LIGHT_RED, COLOR_BLACK)
+    curses.init_pair(11, COLOR_LIGHT_GREEN, COLOR_BLACK)
+    curses.init_pair(12, COLOR_YELLOW, COLOR_BLACK)
+    curses.init_pair(13, COLOR_LIGHT_BLUE, COLOR_BLACK)
+    curses.init_pair(14, COLOR_PURPLE, COLOR_BLACK)
+    curses.init_pair(15, COLOR_BROWN, COLOR_BLACK)
+    curses.init_pair(16, COLOR_DIM_WHITE, COLOR_BLACK)
 
 init_16_colors()
 
@@ -190,8 +192,9 @@ BR = '╯'
 
 BORDER_COLOR = PURPLE
 
+running = True
 
-
+wins = []
 
 actions = {}
 
@@ -206,8 +209,7 @@ def draw():
     curses.noecho()
     curses.set_escdelay(1)
 
-    # Get screen height and width
-    height, width = stdscr.getmaxyx()
+    stdscr.bkgd(' ', BLACK)
 
 
 
@@ -229,26 +231,26 @@ def draw_win(win: curses.window, borders=True, ascii=False, color=WHITE):
     if ascii:
         for i, line in enumerate(HEADER):
             win.addstr(i+1, 1, line, color)
-    log.info("New window created!")
-    log.info(f"Height: {h} Width: {w}")
 
-def main(stdscr):
-    draw()
 
-    height, width = stdscr.getmaxyx()
-    x, y = 0, 0
-
-#
-#   CREATE WINDOWS
-#
-
+def draw_wins(height, width):
     # bottom-left control panel
     ctrlpanel_height = 6
     ctrlpanel_width = 15
     ctrlpanel_y = height - ctrlpanel_height
     ctrlpanel_x = 0
     ctrlpanel = curses.newwin(ctrlpanel_height, ctrlpanel_width, ctrlpanel_y, ctrlpanel_x)
+    ctrlpanel.bkgd(WHITE)
+    ctrlpanel_text = [
+            "p - pause",
+            "r - reset",
+            "? - help",
+            "q - quit"
+    ]
+    for i in range(len(ctrlpanel_text)):
+        ctrlpanel.addstr(i+1, 2, ctrlpanel_text[i])
     draw_win(ctrlpanel)
+    wins.append(ctrlpanel)
 
     # bottom status bar
     statuspanel_height = 4
@@ -256,7 +258,9 @@ def main(stdscr):
     statuspanel_y = height - statuspanel_height
     statuspanel_x = ctrlpanel_width + 1
     statuspanel = curses.newwin(statuspanel_height, statuspanel_width, statuspanel_y, statuspanel_x)
+    statuspanel.bkgd(WHITE)
     draw_win(statuspanel)
+    wins.append(statuspanel)
 
     # top left title
     titlepanel_height = 7
@@ -264,7 +268,9 @@ def main(stdscr):
     titlepanel_y = 0
     titlepanel_x = 0
     titlepanel = curses.newwin(titlepanel_height, titlepanel_width, titlepanel_y, titlepanel_x)
+    titlepanel.bkgd(WHITE)
     draw_win(titlepanel, ascii=True, color=YELLOW)
+    wins.append(titlepanel)
 
     # center main menu
     menupanel_height = 25
@@ -272,7 +278,9 @@ def main(stdscr):
     menupanel_y = 8
     menupanel_x = width // 2 - menupanel_width // 2 - 20
     menupanel = curses.newwin(menupanel_height, menupanel_width, menupanel_y, menupanel_x)
+    menupanel.bkgd(WHITE)
     draw_win(menupanel)
+    wins.append(menupanel)
 
     # right options maybe?
     optionspanel_height = 34
@@ -280,26 +288,40 @@ def main(stdscr):
     optionspanel_y = 0
     optionspanel_x = width - optionspanel_width
     optionspanel = curses.newwin(optionspanel_height, optionspanel_width, optionspanel_y, optionspanel_x)
+    optionspanel.bkgd(WHITE)
     draw_win(optionspanel)
+    wins.append(optionspanel)
+
+def refresh():
+    stdscr.refresh()
+    for win in wins:
+        win.refresh()
 
 
+
+def main(stdscr):
+    draw()
+    height, width = stdscr.getmaxyx()
+    x, y = 0, 0
+    draw_wins(height, width)
+
+    global running
     # Main loop
-    while True:
-        stdscr.refresh()
-        ctrlpanel.refresh()
-        statuspanel.refresh()
-        titlepanel.refresh()
-        menupanel.refresh()
-        optionspanel.refresh()
+    while running:
+        refresh()
         key = stdscr.getkey()
+        if key == 'r':
+            pass
         if key == 'q' or key == '\x1b':
-            log.info("Quitting...")
-            exit(0)
+            running = False
         if key == ' ':
-            stdscr.refresh()
+            refresh()
             continue
         else:
             log.error(f"Invalid key {key}")
+        log.info(f"keypress: {key}")
+
+    log.info("Quitting...")
 
 
 
