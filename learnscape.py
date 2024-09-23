@@ -8,7 +8,7 @@
 #
 
 #
-# Boilerplate for curses application
+# Visualize various computer science elements
 #
 
 
@@ -24,10 +24,9 @@ import time
 import logging
 
 # Configure logging
-logging.basicConfig(filename= __file__, level=logging.DEBUG, filemode='w',
+logging.basicConfig(filename= f"{__file__}/../debug.log", level=logging.DEBUG, filemode='w',
                     format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
-log.debug("what the hell")
 
 stdscr = curses.initscr()
 
@@ -145,7 +144,7 @@ def init_16_colors():
     curses.init_pair(13, COLOR_LIGHT_BLUE, COLOR_BLACK)
     curses.init_pair(14, COLOR_PURPLE, COLOR_BLACK)
     curses.init_pair(15, COLOR_BROWN, COLOR_BLACK)
-    curses.init_pair(16, COLOR_DIM_WHITE, COLOR_BLACK)
+    curses.init_pair(16, COLOR_DIM_WHITE, COLOR_RED)
 
 init_16_colors()
 
@@ -170,11 +169,11 @@ DIM_WHITE = curses.color_pair(16)
 
 
 HEADER = [
-r"""  ,--.                             ,---.                           """, 
-r"""  |  |   ,---. ,--,--,--.--,--,--,'   .-' ,---.,--,--.,---. ,---.  """, 
-r"""  |  |  | .-. ' ,-.  |  .--|      `.  `-.| .--' ,-.  | .-. | .-. : """, 
-r"""  |  '--\   --\ '-'  |  |  |  ||  .-'    \ `--\ '-'  | '-' \   --. """, 
-r"""  `-----'`----'`--`--`--'  `--''--`-----' `---'`--`--|  |-' `----' """, 
+r"""  ,--.                             ,---.                            """, 
+r"""  |  |   ,---. ,--,--,--.--,--,--,'   .-' ,---.,--,--.,---. ,---.   """, 
+r"""  |  |  | .-. ' ,-.  |  .--|      `.  `-.| .--' ,-.  | .-. | .-. :  """, 
+r"""  |  '--\   --\ '-'  |  |  |  ||  .-'    \ `--\ '-'  | '-' \   --.  """, 
+r"""  `-----'`----'`--`--`--'  `--''--`-----' `---'`--`--|  |-' `----'  """, 
 ]
 
 # Box drawing characters
@@ -195,6 +194,11 @@ BORDER_COLOR = PURPLE
 running = True
 
 wins = []
+CTRLPANEL_I = 0
+STATUSPANEL_I = 1
+TITLEPANEL_I = 2
+MENUPANEL_I = 3
+OPTIONSPANEL_I = 4
 
 actions = {}
 
@@ -209,7 +213,7 @@ def draw():
     curses.noecho()
     curses.set_escdelay(1)
 
-    stdscr.bkgd(' ', BLACK)
+    stdscr.bkgd(' ', WHITE)
 
 
 
@@ -242,10 +246,10 @@ def draw_wins(height, width):
     ctrlpanel = curses.newwin(ctrlpanel_height, ctrlpanel_width, ctrlpanel_y, ctrlpanel_x)
     ctrlpanel.bkgd(WHITE)
     ctrlpanel_text = [
-            "p - pause",
-            "r - reset",
-            "? - help",
-            "q - quit"
+        "p - pause",
+        "r - reset",
+        "? - help",
+        "q - quit"
     ]
     for i in range(len(ctrlpanel_text)):
         ctrlpanel.addstr(i+1, 2, ctrlpanel_text[i])
@@ -259,12 +263,19 @@ def draw_wins(height, width):
     statuspanel_x = ctrlpanel_width + 1
     statuspanel = curses.newwin(statuspanel_height, statuspanel_width, statuspanel_y, statuspanel_x)
     statuspanel.bkgd(WHITE)
+    statuspanel_text = [
+        "p - pause",
+        "r - reset",
+    ]
+    for i, line in enumerate(statuspanel_text):
+        x = (statuspanel_width-1) // 2 - len(line) // 2
+        statuspanel.addstr(i+1, x, line)
     draw_win(statuspanel)
     wins.append(statuspanel)
 
     # top left title
     titlepanel_height = 7
-    titlepanel_width = 70
+    titlepanel_width = 71
     titlepanel_y = 0
     titlepanel_x = 0
     titlepanel = curses.newwin(titlepanel_height, titlepanel_width, titlepanel_y, titlepanel_x)
@@ -279,6 +290,16 @@ def draw_wins(height, width):
     menupanel_x = width // 2 - menupanel_width // 2 - 20
     menupanel = curses.newwin(menupanel_height, menupanel_width, menupanel_y, menupanel_x)
     menupanel.bkgd(WHITE)
+    menupanel_text = [
+        "1 - scheduler algorithms",
+        "2 - memory management",
+        "3 - deadlock",
+        # "4 - ",
+        # "5 - ",
+    ]
+    for i, line in enumerate(menupanel_text):
+        x = (menupanel_width-1) // 2 - len(line) // 2
+        menupanel.addstr(i+1, x, line)
     draw_win(menupanel)
     wins.append(menupanel)
 
@@ -289,6 +310,14 @@ def draw_wins(height, width):
     optionspanel_x = width - optionspanel_width
     optionspanel = curses.newwin(optionspanel_height, optionspanel_width, optionspanel_y, optionspanel_x)
     optionspanel.bkgd(WHITE)
+    optionspanel_text = [
+        # "p - pause",
+        # "r - reset",
+        # "? - help",
+        # "q - quit"
+    ]
+    for i in range(len(optionspanel_text)):
+        optionspanel.addstr(i+1, 2, optionspanel_text[i])
     draw_win(optionspanel)
     wins.append(optionspanel)
 
@@ -297,6 +326,34 @@ def refresh():
     for win in wins:
         win.refresh()
 
+def update_status_last_key(key):
+    wins[STATUSPANEL_I].addstr(1, 2, f"last key: {key}")
+
+
+def show_help(height, width):
+    helppanel_height = 10
+    helppanel_width = 20
+    helppanel_y = height - 6 - helppanel_height
+    helppanel_x = 0
+    helppanel = curses.newwin(helppanel_height, helppanel_width, helppanel_y, helppanel_x)
+    helppanel.bkgd(WHITE)
+    helppanel_text = [
+
+        "p - pause",
+        "r - reset",
+        "? - help", 
+        "q - quit"
+    ]
+    for i in range(len(helppanel_text)):
+        helppanel.addstr(i+1, 2, helppanel_text[i])
+    draw_win(helppanel)
+    helppanel.refresh()
+    key = stdscr.getkey()
+    helppanel.erase()
+    helppanel.bkgd(' ', WHITE)
+    helppanel.refresh()
+    del helppanel
+    return key
 
 
 def main(stdscr):
@@ -310,15 +367,20 @@ def main(stdscr):
     while running:
         refresh()
         key = stdscr.getkey()
-        if key == 'r':
+        if key == '?':
+            update_status_last_key(key)
+            refresh()
+            key = show_help(height, width)
+        elif key == 'r':
             pass
-        if key == 'q' or key == '\x1b':
+        elif key == 'q' or key == '\x1b':
             running = False
-        if key == ' ':
+        elif key == ' ':
             refresh()
             continue
         else:
             log.error(f"Invalid key {key}")
+        update_status_last_key(key)
         log.info(f"keypress: {key}")
 
     log.info("Quitting...")
